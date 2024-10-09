@@ -63,7 +63,12 @@ function listen () {
 
         // Send BingePack
         ping(bingePack,'bingepack');
-        videoplayer.setAttribute("src", data.video);
+        videoplayer.setAttribute("src", bingePack.video);
+
+        
+        ping({position:videoplayer.currentTime},'seek');
+        
+
 
     });
 
@@ -99,6 +104,7 @@ function listen () {
             // }]);
             console.log('Binge Pack Recieved');
             videoplayer.setAttribute("src", data.video);
+            bingePack = data;
         }
         if(data.from == selfId){
             return;
@@ -192,6 +198,9 @@ adminVideoChange.addEventListener('click',()=>{
 var adminSyncPlayback = document.getElementById('sync-playback');
 
 adminSyncPlayback.addEventListener('click',()=>{
+
+  videoplayer.setAttribute('src',bingePack.video);
+
   adminSyncPlayback.setAttribute('disabled',true);
   position = videoplayer.currentTime;
   

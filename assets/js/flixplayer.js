@@ -94,3 +94,7 @@ const video = document.getElementById('videoplayer');
                 showControls(); 
             }
         });
+
+        
+
+        playPauseIcon.focus();
