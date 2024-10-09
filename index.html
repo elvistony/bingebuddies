@@ -14,7 +14,7 @@
 </body>
 <script>
   var createBtn = document.getElementById('create-room');
-  const baseURL = 'http://192.168.0.157:5500/'
+  const baseURL = 'https://elvistony.dev/bingebuddies/'
   createBtn.addEventListener('click',()=>{
     var roomId = Math.random().toString(36).slice(2);
     document.getElementById('link-url').value = roomId;
