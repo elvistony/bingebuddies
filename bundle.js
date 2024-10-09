@@ -20,12 +20,13 @@ var bingePack = {
     'cover':"https://i.ytimg.com/vi/_cMxraX_5RE/maxresdefault.jpg",
     'video':"https://upload.wikimedia.org/wikipedia/commons/transcoded/7/74/Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm/Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm.480p.vp9.webm",
     'srt':"",
-    'desc':"Now Binging"
+    'desc':"Now Binging",
+    'position':0
 }
 
 videoplayer.src = bingePack.video;
 
-peer_template = {
+var peer_template = {
     id:'',
     peer:false
 }
@@ -37,6 +38,9 @@ function init (roomId) {
     "wss://tracker.openwebtorrent.com",
     "wss://tracker.webtorrent.io",
     "wss://tracker.btorrent.xyz",
+    "wss://tracker.webtorrent.dev",
+    "ws://tracker.files.fm:7072/announce",
+    "udp://tracker.opentrackr.org:1337/announce",
     // "wss://tracker.novage.com.ua",
     "wss://tracker.files.fm:7073/announce",
     // "wss://tracker.openwebtorrent.com",
@@ -58,16 +62,19 @@ function listen () {
         statusText.innerText = `Connected to peer: ${peer.id}`;
 
         // Send BingePack
-        ping(bingePack,'bingepack')
+        ping(bingePack,'bingepack');
+        videoplayer.setAttribute("src", data.video);
 
     });
 
     p2pt.on('peerclose', (peer) => {
         delete Peers[peer.id]
         console.log(`Disconnected from ${peer.id}`);
-        // Change status to red
+        if(Object.keys(Peers).length==0){
+                  // Change status to red
         statusLed.style.backgroundColor = 'red';
         statusText.innerText = 'Not connected to any peer';
+        }
     });
 
     p2pt.on('msg', (peer, msg) => {
@@ -83,17 +90,18 @@ function listen () {
         //         videoPlayer.pause();
         //     }
         // }
-        if(data.from == selfId){
-            return;
-        }
-        if(data.type == "bingePack"){
+        if(data.type == "bingepack"){
             // playerInstance.load([{
             //     file: data.video,
             //     image: data.image,
             //     title: data.title,
             //     description: data.desc
             // }]);
-            videoplayer.src = data.video
+            console.log('Binge Pack Recieved');
+            videoplayer.setAttribute("src", data.video);
+        }
+        if(data.from == selfId){
+            return;
         }
         if(data.type == "play"){
             // playerInstance.play();
@@ -169,104 +177,131 @@ videoplayer.addEventListener('seeked', (event) => {
 });
 
 
+var adminVideoChange = document.getElementById('fire-video-change');
 
-playerInstance.on("ready", function () {
-    const buttonId = "upload-link";
-    const iconPath =
-        "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTMgMTloMTh2Mkgzdi0yem0xMC01LjgyOEwxOS4wNzEgNy4xbDEuNDE0IDEuNDE0TDEyIDE3IDMuNTE1IDguNTE1IDQuOTI5IDcuMSAxMSAxMy4xN1YyaDJ2MTEuMTcyeiIgZmlsbD0icmdiYSgyNDcsMjQ3LDI0NywxKSIvPjwvc3ZnPg==";
-    const tooltipText = "Upload Video URL";
+adminVideoChange.addEventListener('click',()=>{
+  var url = document.getElementById('VideoURL').value;
+  var title = document.getElementById('VideoTitle').value;
+  pack = { ...bingePack }
+  pack['video'] = url;
+  pack['title'] = title;
+  ping(pack,'bingepack')
+})
+
+
+var adminSyncPlayback = document.getElementById('sync-playback');
+
+adminSyncPlayback.addEventListener('click',()=>{
+  adminSyncPlayback.setAttribute('disabled',true);
+  position = videoplayer.currentTime;
+  
+  ping({},'pause');
+  videoplayer.pause()
+  ping({position:position},'seek');
+  setTimeout(()=>{
+    ping({position:position},'play');
+    videoplayer.play();
+    adminSyncPlayback.setAttribute('disabled',false);
+  },3000);
+})
+
+// playerInstance.on("ready", function () {
+//     const buttonId = "upload-link";
+//     const iconPath =
+//         "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTMgMTloMTh2Mkgzdi0yem0xMC01LjgyOEwxOS4wNzEgNy4xbDEuNDE0IDEuNDE0TDEyIDE3IDMuNTE1IDguNTE1IDQuOTI5IDcuMSAxMSAxMy4xN1YyaDJ2MTEuMTcyeiIgZmlsbD0icmdiYSgyNDcsMjQ3LDI0NywxKSIvPjwvc3ZnPg==";
+//     const tooltipText = "Upload Video URL";
     
-    // // Call the player's `addButton` API method to add the custom button
-    playerInstance.addButton(iconPath, tooltipText, buttonClickAction, buttonId);
+//     // // Call the player's `addButton` API method to add the custom button
+//     playerInstance.addButton(iconPath, tooltipText, buttonClickAction, buttonId);
     
-    // // This function is executed when the button is clicked
-    function buttonClickAction() {
+//     // // This function is executed when the button is clicked
+//     function buttonClickAction() {
 
-        var url = prompt("New URL?","")
+//         var url = prompt("New URL?","")
 
-        console.log("Broadcasting new SRC...")
+//         console.log("Broadcasting new SRC...")
 
-        // const playlistItem = playerInstance.getPlaylistItem();
-        // const anchor = document.createElement("a");
-        // const fileUrl = playlistItem.file;
-        // anchor.setAttribute("href", fileUrl);
-        // const downloadName = playlistItem.file.split("/").pop();
-        // anchor.setAttribute("download", downloadName);
-        // anchor.style.display = "none";
-        // document.body.appendChild(anchor);
-        // anchor.click();
-        // document.body.removeChild(anchor);
-    }
+//         // const playlistItem = playerInstance.getPlaylistItem();
+//         // const anchor = document.createElement("a");
+//         // const fileUrl = playlistItem.file;
+//         // anchor.setAttribute("href", fileUrl);
+//         // const downloadName = playlistItem.file.split("/").pop();
+//         // anchor.setAttribute("download", downloadName);
+//         // anchor.style.display = "none";
+//         // document.body.appendChild(anchor);
+//         // anchor.click();
+//         // document.body.removeChild(anchor);
+//     }
     
-    // Move the timeslider in-line with other controls
-    const playerContainer = playerInstance.getContainer();
-    const buttonContainer = playerContainer.querySelector(".jw-button-container");
-    const spacer = buttonContainer.querySelector(".jw-spacer");
-    const timeSlider = playerContainer.querySelector(".jw-slider-time");
-    buttonContainer.replaceChild(timeSlider, spacer);
+//     // Move the timeslider in-line with other controls
+//     const playerContainer = playerInstance.getContainer();
+//     const buttonContainer = playerContainer.querySelector(".jw-button-container");
+//     const spacer = buttonContainer.querySelector(".jw-spacer");
+//     const timeSlider = playerContainer.querySelector(".jw-slider-time");
+//     buttonContainer.replaceChild(timeSlider, spacer);
     
     
-    // Forward 10 seconds
-    const rewindContainer = playerContainer.querySelector(
-        ".jw-display-icon-rewind"
-    );
-    const forwardContainer = rewindContainer.cloneNode(true);
-    const forwardDisplayButton = forwardContainer.querySelector(
-        ".jw-icon-rewind"
-    );
-    forwardDisplayButton.style.transform = "scaleX(-1)";
-    forwardDisplayButton.ariaLabel = "Forward 10 Seconds";
-    const nextContainer = playerContainer.querySelector(".jw-display-icon-next");
-    nextContainer.parentNode.insertBefore(forwardContainer, nextContainer);
+//     // Forward 10 seconds
+//     const rewindContainer = playerContainer.querySelector(
+//         ".jw-display-icon-rewind"
+//     );
+//     const forwardContainer = rewindContainer.cloneNode(true);
+//     const forwardDisplayButton = forwardContainer.querySelector(
+//         ".jw-icon-rewind"
+//     );
+//     forwardDisplayButton.style.transform = "scaleX(-1)";
+//     forwardDisplayButton.ariaLabel = "Forward 10 Seconds";
+//     const nextContainer = playerContainer.querySelector(".jw-display-icon-next");
+//     nextContainer.parentNode.insertBefore(forwardContainer, nextContainer);
     
-    // control bar icon
-    playerContainer.querySelector(".jw-display-icon-next").style.display = "none"; // hide next button
-    const rewindControlBarButton = buttonContainer.querySelector(
-        ".jw-icon-rewind"
-    );
-    const forwardControlBarButton = rewindControlBarButton.cloneNode(true);
-    forwardControlBarButton.style.transform = "scaleX(-1)";
-    forwardControlBarButton.ariaLabel = "Forward 10 Seconds";
-    rewindControlBarButton.parentNode.insertBefore(
-        forwardControlBarButton,
-        rewindControlBarButton.nextElementSibling
-    );
+//     // control bar icon
+//     playerContainer.querySelector(".jw-display-icon-next").style.display = "none"; // hide next button
+//     const rewindControlBarButton = buttonContainer.querySelector(
+//         ".jw-icon-rewind"
+//     );
+//     const forwardControlBarButton = rewindControlBarButton.cloneNode(true);
+//     forwardControlBarButton.style.transform = "scaleX(-1)";
+//     forwardControlBarButton.ariaLabel = "Forward 10 Seconds";
+//     rewindControlBarButton.parentNode.insertBefore(
+//         forwardControlBarButton,
+//         rewindControlBarButton.nextElementSibling
+//     );
     
-    // add onclick handlers
-    [forwardDisplayButton, forwardControlBarButton].forEach((button) => {
-        button.onclick = () => {
-        playerInstance.seek(playerInstance.getPosition() + 10);
-        };
-    });
-});
+//     // add onclick handlers
+//     [forwardDisplayButton, forwardControlBarButton].forEach((button) => {
+//         button.onclick = () => {
+//         playerInstance.seek(playerInstance.getPosition() + 10);
+//         };
+//     });
+// });
 
-playerInstance.on('pause', (event) => {
-    console.log('Broadcasting Pause!');
-    ping({},'pause')
-});
+// playerInstance.on('pause', (event) => {
+//     console.log('Broadcasting Pause!');
+//     ping({},'pause')
+// });
 
-playerInstance.on('play', (event) => {
-    console.log('Broadcasting Play!');
-    ping({},'play')
-});
+// playerInstance.on('play', (event) => {
+//     console.log('Broadcasting Play!');
+//     ping({},'play')
+// });
 
-playerInstance.on('complete', (event) => {
-    console.log('Broadcasting Finish!');
-    ping({},'complete')
-});
+// playerInstance.on('complete', (event) => {
+//     console.log('Broadcasting Finish!');
+//     ping({},'complete')
+// });
 
-playerInstance.on('seek', (event) => {
-    playerInstance.pause();
-});
+// playerInstance.on('seek', (event) => {
+//     playerInstance.pause();
+// });
 
 
-playerInstance.on('seeked', (event) => {
-    if(!seekCooldown){
-        position = playerInstance.getPosition();
-        console.log('Broadcasting seek position!',position);
-        ping({'position':position},'seek')
-    }
-});
+// playerInstance.on('seeked', (event) => {
+//     if(!seekCooldown){
+//         position = playerInstance.getPosition();
+//         console.log('Broadcasting seek position!',position);
+//         ping({'position':position},'seek')
+//     }
+// });
 
 
 

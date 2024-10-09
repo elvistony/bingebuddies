@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BingeBuddies</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BingeBuddies</title>
 </head>
-<body style="margin: 0;">
-    <!--  Fullscreen Video CSS -->
-<style>
-    #player {
-      position: absolute;
-      width: 100% !important;
-      height: 100% !important;
-    }
-</style>
-<div class="mb-3">
-    <div class="status-led" id="status-led"></div>
-    <span id="status-text">Not connected to any peer</span>
-</div>
-<video src="" controls style="height: 100%;"  class="" id="videoplayer"></video>
+<body>
+  <button id="create-room">Create New Theatre</button>
+  <input type="text" name="" readonly id="link-url">
+
+  <a id="link-theatre" href="#">Open Theatre</a>
+  <a id="link-admin" href="#">Open Admin Panel</a>
 </body>
-<script src="/assets/js/jwplayer.js"></script>
-<script src="/assets/js/script.js"></script>
-<script src="bundle.js"></script>
+<script>
+  var createBtn = document.getElementById('create-room');
+  const baseURL = 'http://192.168.0.157:5500/'
+  createBtn.addEventListener('click',()=>{
+    var roomId = Math.random().toString(36).slice(2);
+    document.getElementById('link-url').value = roomId;
+
+    document.getElementById('link-theatre').setAttribute('href',baseURL+"play/#/"+roomId);
+    document.getElementById('link-admin').setAttribute('href',baseURL+"admin/#/"+roomId);
+  })
+</script>
 </html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix Style Video Player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/flix.css">
+</head>
+<body>
+
+    <video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" class="video-background" id="videoplayer" >   </video>
+
+    <button class="rewind control-button" id="rewindBtn"><i class="fas fa-undo"></i><sub> 10s</sup></button>
+    <button class="forward control-button" id="forwardBtn"><i class="fas fa-redo"></i><sub>10s</sub></button>
+
+    <div class="controls-overlay" id="controlsOverlay">
+        <div class="controls">
+            <div class="left-controls">
+                <button id="playPauseBtn" class="control-button">
+                    <i class="fas fa-play play-pause" id="playPauseIcon"></i>
+                </button>
+            </div>
+            
+            <div class="right-controls">
+                <button class="control-button control-button-mini">
+                    <i class="fas fa-upload volume-control"></i>
+                </button>
+                <button class="control-button control-button-mini">
+                    <i class="fas fa-link settings-control"></i>
+                </button>
+                <button id="fullscreenBtn" class="control-button">
+                    <i class="fas fa-compress fullscreen" id="fullscreenIcon"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+<script src="/assets/js/flixplayer.js"></script>
+<!-- <script src="/assets/js/script.js"></script> -->
+<script src="/bundle.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script> -->
+
+</body>
+</html>
