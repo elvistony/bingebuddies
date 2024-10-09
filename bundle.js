@@ -6,6 +6,7 @@ const trackerURL = 'wss://tracker.openwebtorrent.com';
 const P2PT = require('p2pt')
 const statusLed = document.getElementById('status-led');
 const statusText = document.getElementById('status-text');
+const videoplayer = document.getElementById('videoplayer');
 const selfId = Math.random().toString(36).slice(2);
 let p2pt;
 let seekCooldown = false;
@@ -21,6 +22,8 @@ var bingePack = {
     'srt':"",
     'desc':"Now Binging"
 }
+
+videoplayer.src = bingePack.video;
 
 peer_template = {
     id:'',
@@ -60,6 +63,7 @@ function listen () {
     });
 
     p2pt.on('peerclose', (peer) => {
+        delete Peers[peer.id]
         console.log(`Disconnected from ${peer.id}`);
         // Change status to red
         statusLed.style.backgroundColor = 'red';
@@ -83,24 +87,30 @@ function listen () {
             return;
         }
         if(data.type == "bingePack"){
-            playerInstance.load([{
-                file: data.video,
-                image: data.image,
-                title: data.title,
-                description: data.desc
-            }]);
+            // playerInstance.load([{
+            //     file: data.video,
+            //     image: data.image,
+            //     title: data.title,
+            //     description: data.desc
+            // }]);
+            videoplayer.src = data.video
         }
         if(data.type == "play"){
-            playerInstance.play();
+            // playerInstance.play();
+            videoplayer.play()
         }
         if(data.type == "pause"){
-            playerInstance.pause();
+            // playerInstance.pause();
+            videoplayer.pause()
         }
         if(data.type == "seek"){
             if(!seekCooldown){
+                seekCooldown=true
                 startSeekCooldown(5);
             }
-            playerInstance.seek(data.position)
+            // playerInstance.seek(data.position);
+            videoplayer.currentTime = data.position;
+            videoplayer.pause();
         }
         
     });
@@ -130,6 +140,33 @@ function ping(data,type){
     
 }
 
+videoplayer.addEventListener('pause', (event) => {
+  console.log('Broadcasting Pause!');
+  ping({},'pause')
+});
+
+videoplayer.addEventListener('play', (event) => {
+  console.log('Broadcasting Play!');
+  ping({},'play')
+});
+
+videoplayer.addEventListener('complete', (event) => {
+  console.log('Broadcasting Finish!');
+  ping({},'complete')
+});
+
+videoplayer.addEventListener('seek', (event) => {
+  videoplayer.pause();
+});
+
+
+videoplayer.addEventListener('seeked', (event) => {
+  if(!seekCooldown){
+      position = videoplayer.currentTime;
+      console.log('Broadcasting seek position!',position);
+      ping({'position':position},'seek')
+  }
+});
 
 
 
