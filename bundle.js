@@ -17,7 +17,7 @@ var bingePack = {
     'title':"Sprite Fright",
     'cover':"https://i.ytimg.com/vi/_cMxraX_5RE/maxresdefault.jpg",
     'video':"https://vod.cf.dmcdn.net/sec2(XJkW6WD8oA89Lm0fqApRru8eSYD7YIzFSJQCO6mCEgm4bQR6hjdYauil4lMB3U-ACxMdtZwS9Z2oJQ-3h0K_NOZvNtcN5uV_nbDVeFE34yB1Dw-yZxcVsU3U0ueDpeo-qyo1J3wMoFyB1gE9PfcuGMpUyk7-J_4I1n0kmw-54FhNDTJ2WbL_lILguOQO2yr5)/video/442/474/555474244_mp4_h264_aac_hq_3.mp4#cell=cf",
-    'srt':"//vod.cf.dmcdn.net/sec2(k3v7tClvUlOOxSQt43jP2dzmQrTZnT-IeiG5nmteg6kdDh2stKCLKBGGOify1-ETY_8BD_fQ5kU1CpSN-TO1HExv1vHd12Z3xiAmEcLVWYKo5g8oYpWYSfzTElkt5KWUIQTLgx6g41aREk0XzkSRYcj3kns6d4NAxegjwZoOPLVAfGmthKiv6qGCRscPhg_D)/video/442/474/555474244_mp4_h264_aac_hq_3.m3u8#cell=cf",
+    'srt':"https://static2.dmcdn.net/static/video/442/474/555474244_subtitle_en-auto.srt",
     'desc':"Now Binging",
     'position':0,
     'unset':true,
@@ -117,12 +117,21 @@ function listen () {
               videoplayer.pause();
             }
         }
+        if(data.type == "applysubs"){
+            try {
+              
+            } catch (error) {
+              console.log('Unable to apply subs',error)
+            }
+        }
+
         if(data.type == "subs"){ 
           const track = document.createElement('track');
           // Set the track's kind, label, and src attributes
           track.kind = 'captions';
           track.label = 'English';
           track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent(data.content);
+          track.default = true;
           videoplayer.appendChild(track);
           // seeker(data.position)
         }  
@@ -181,30 +190,7 @@ videoplayer.addEventListener('canplaythrough',()=>{
   // document.querySelector('.start-container').style.display='none';
 })
 
-document.querySelector('.start-button').addEventListener('click',()=>{
-  videoplayer.muted=false;
-  // videoplayer.buffer();
-  document.querySelector('.start-container').style.display='none';
-  ping({'ready':true},'ready');
-})
 
-document.querySelector('#syncNow').addEventListener('click',()=>{
-  console.log('Syncing Timestamp...')
-  position = videoplayer.currentTime;
-  ping({position:position},'seek');
-})
-
-
-
-var adminVideoChange = document.getElementById('fire-video-change');
-adminVideoChange.addEventListener('click',()=>{
-  var url = document.getElementById('VideoURL').value;
-  var title = document.getElementById('VideoTitle').value;
-  pack = { ...bingePack }
-  pack['video'] = url;
-  pack['title'] = title;
-  ping(pack,'forceBingePack')
-})
 
 function isIOSDevice() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -225,61 +211,106 @@ function seeker(X){
 
 // Subtitles 
 
-function addSubtitles(videoElement, srtContent) {
-  // Create a new track element
-  const track = document.createElement('track');
 
-  // Set the track's kind, label, and src attributes
-  track.kind = 'captions';
-  track.label = 'English';
-  track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent(srtToVtt(srtContent));
-
-  // Add the track to the video element
-  videoElement.appendChild(track);
-}
-
-function srtToVtt(srtContent) {
-  // Convert SRT content to VTT format
-  const lines = srtContent.split('\n');
-  let vttContent = 'WEBVTT\n\n';
-
-  let cueNumber = 1;
-  let startTime = '';
-  let endTime = '';
-  let text = '';
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-
-    if (line.match(/^\d+$/)) {
-      // Start of a new cue
-      cueNumber = parseInt(line);
-    } else if (line.match(/^\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}$/)) {
-      // Timestamps for the cue
-      const timestamps = line.split(' --> ');
-      startTime = timestamps[0];
-      endTime = timestamps[1];
-    } else {
-      // Text for the cue
-      text += line + '\n';
-    }
-
-    if (i === lines.length - 1 || lines[i + 1].match(/^\d+$/)) {
-      // End of the cue
-      vttContent += cueNumber + '\n' + startTime + ' --> ' + endTime + '\n' + text + '\n\n';
-      text = '';
+function srtToVtt(data) {
+  var srt = data.replace(/\r+/g, '');
+  srt = srt.replace(/^\s+|\s+$/g, '');
+  var cuelist = srt.split('\n\n');
+  var result = "";
+  if (cuelist.length > 0) {
+    result += "WEBVTT\n\n";
+    for (var i = 0; i < cuelist.length; i=i+1) {
+      result += convertSrtCue(cuelist[i]);
     }
   }
 
-  return vttContent;
+  return result;
 }
 
-document.querySelector('#subtitlePush').addEventListener('click',()=>{
-  subPack = {}
-  subPack['content'] = srtToVtt(srtContent);
-  ping(subPack,'subs');
-  // track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent();
-})
+function convertSrtCue(caption) {
+  var cue = "";
+  var s = caption.split(/\n/);
+  while (s.length > 3) {
+      for (var i = 3; i < s.length; i++) {
+          s[2] += "\n" + s[i]
+      }
+      s.splice(3, s.length - 3);
+  }
+
+  var line = 0;
+  if (!s[0].match(/\d+:\d+:\d+/) && s[1].match(/\d+:\d+:\d+/)) {
+    cue += s[0].match(/\w+/) + "\n";
+    line += 1;
+  }
+  if (s[line].match(/\d+:\d+:\d+/)) {
+    var m = s[1].match(/(\d+):(\d+):(\d+)(?:,(\d+))?\s*--?>\s*(\d+):(\d+):(\d+)(?:,(\d+))?/);
+    if (m) {
+      cue += m[1]+":"+m[2]+":"+m[3]+"."+m[4]+" --> "
+            +m[5]+":"+m[6]+":"+m[7]+"."+m[8]+"\n";
+      line += 1;
+    } else {
+      return "";
+    }
+  } else {
+    return "";
+  }
+
+  if (s[line]) {
+    cue += s[line] + "\n\n";
+  }
+
+  return cue;
+}
+
+try {
+  document.querySelector('.start-button').addEventListener('click',()=>{
+    videoplayer.muted=false;
+    // videoplayer.buffer();
+    document.querySelector('.start-container').style.display='none';
+    ping({'ready':true},'ready');
+  })
+
+  document.querySelector('#syncNow').addEventListener('click',()=>{
+    console.log('Syncing Timestamp...')
+    position = videoplayer.currentTime;
+    ping({position:position},'seek');
+  })
+} catch (error) {
+  console.log("Play Error:",error)
+
+}
+
+
+// Admin Options
+try {
+  document.getElementById('subtitlePush').addEventListener('click',()=>{
+    srtContent = document.getElementById('subs').value;
+    subPack = {}
+    subPack['content'] = srtToVtt(srtContent);
+    console.log('SRT to VTT',srtToVtt(srtContent))
+    ping(subPack,'subs');
+    // track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent();
+  })
+
+  
+  var adminVideoChange = document.getElementById('fire-video-change');
+  adminVideoChange.addEventListener('click',()=>{
+    var url = document.getElementById('VideoURL').value;
+    var title = document.getElementById('VideoTitle').value;
+    pack = { ...bingePack }
+    pack['video'] = url;
+    pack['title'] = title;
+    ping(pack,'forceBingePack')
+  })
+} catch (error) {
+  console.log("Admin Error:",error)
+}
+
+
+
+
+
+
 
 // var adminSyncPlayback = document.getElementById('sync-playback');
 // adminSyncPlayback.addEventListener('click',()=>{
