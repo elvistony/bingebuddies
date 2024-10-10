@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netflix Style Video Player</title>
+    <title>BingeBuddies | Elvis Tony</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/flix.css">
 </head>
@@ -13,15 +13,32 @@
     </div>
     <video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" class="video-background" id="videoplayer" >   </video>
 
-    <button class="rewind control-button" id="rewindBtn"><i class="fas fa-undo"></i><sub> 10s</sup></button>
-    <button class="forward control-button" id="forwardBtn"><i class="fas fa-redo"></i><sub>10s</sub></button>
+    
 
     <div class="controls-overlay" id="controlsOverlay">
+        <div class="pos-abs video-title">
+            <h5 id="videoDesc">Now Playing</h5>
+            <h1 id="videoTitle">BingeBuddies</h1>
+        </div>
+        <button class="rewind pos-abs control-button" id="rewindBtn"><i class="fas fa-undo"></i><sub> 10s</sup></button>
+        <button class="forward pos-abs control-button" id="forwardBtn"><i class="fas fa-redo"></i><sub>10s</sub></button>
+        <div class="pos-abs room-specs">
+            <h4 >Buddies: <span class="buddy-count" id="membersCount">0</span></h4>
+            <h4 ><small>Code:</small> <span id="RoomCode" class="room-code"></span></h4>
+            
+        </div>
         <div class="controls">
             <div class="left-controls">
                 <button id="playPauseBtn" class="control-button">
                     <i class="fas fa-play play-pause" id="playPauseIcon"></i>
                 </button>
+            </div>
+            <div class="middle-controls">
+                <div class="timestamps" id="startTime">00:00:00</div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar"></div>
+                </div>
+                <div class="timestamps" id="endTime">00:00:00</div>
             </div>
             
             <div class="right-controls">

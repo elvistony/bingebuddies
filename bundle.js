@@ -14,9 +14,8 @@ let seekCooldownTimeout;
 init (roomId)
 
 var bingePack = {
-    'title':"Sprite Fright",
-    'cover':"https://i.ytimg.com/vi/_cMxraX_5RE/maxresdefault.jpg",
-    'video':"https://vod.cf.dmcdn.net/sec2(XJkW6WD8oA89Lm0fqApRru8eSYD7YIzFSJQCO6mCEgm4bQR6hjdYauil4lMB3U-ACxMdtZwS9Z2oJQ-3h0K_NOZvNtcN5uV_nbDVeFE34yB1Dw-yZxcVsU3U0ueDpeo-qyo1J3wMoFyB1gE9PfcuGMpUyk7-J_4I1n0kmw-54FhNDTJ2WbL_lILguOQO2yr5)/video/442/474/555474244_mp4_h264_aac_hq_3.mp4#cell=cf",
+    'title':"BingeBuddies",
+    'video':"#",
     // 'srt':"https://static2.dmcdn.net/static/video/442/474/555474244_subtitle_en-auto.srt",
     'desc':"Now Binging",
     'position':0,
@@ -32,8 +31,9 @@ if(bingePack.srt){
   track.src = bingePack.srt;
   // track.default = true;
   videoplayer.appendChild(track);
-  
 }
+
+
 var peer_template = { id:'', peer:false }
 
 function init (roomId) {
@@ -68,11 +68,14 @@ function listen () {
         // Send BingePack
         ping(bingePack,'bingepack');
         ping({position:videoplayer.currentTime},'seek');
+        updatePeerCount()
+
     });
 
     p2pt.on('peerclose', (peer) => {
         delete Peers[peer.id]
         console.log(`Disconnected from ${peer.id}`);
+        updatePeerCount()
         // if(Object.keys(Peers).length==0){  } // LED goes RED
     });
 
@@ -87,6 +90,7 @@ function listen () {
               bingePack = data;
               bingePack.unset=false;
               videoplayer.setAttribute("src", bingePack.video);
+              videoplayer.load();
             }else{console.log('Already received Welcome Bingepack');}  
         }
         if(data.type == "forceBingePack"){
@@ -94,6 +98,7 @@ function listen () {
             bingePack.unset=false;
             bingePack = data;
             videoplayer.setAttribute("src", bingePack.video);  
+            videoplayer.load();
         }
         if(data.from == selfId){ return; }
         if(data.type == "play"){ 
@@ -117,12 +122,11 @@ function listen () {
               videoplayer.pause();
             }
         }
-        if(data.type == "applysubs"){
-            try {
-              
-            } catch (error) {
-              console.log('Unable to apply subs',error)
-            }
+        if(data.type == "videoError"){
+            updatePeerStatus(peer.id,'notok',data.error)
+        }
+        if(data.type == "videoSuccess"){
+            updatePeerStatus(peer.id,'ok')
         }
 
         if(data.type == "subs"){ 
@@ -138,6 +142,49 @@ function listen () {
     });
     p2pt.start()
 }
+
+function updatePeerCount(){
+  document.getElementById('membersCount').innerText=Object.keys(Peers).length;
+  document.querySelector('#watchers').innerHTML=''
+  try {
+    Object.keys(Peers).forEach((peer)=>{
+      var peerNode = document.createElement('li');
+      var peerNodeStatus = document.createElement('span');
+      var peerNodeName = document.createElement('span');
+      peerNodeStatus.setAttribute('id',peer+'-status');
+      peerNodeStatus.innerText='🟡'; //🔴🟢
+      peerNodeName.innerText = peer;
+      peerNode.setAttribute('id',peer+'-element');
+      peerNode.classList.add('list-group-item');
+      peerNode.appendChild(peerNodeStatus);
+      peerNode.appendChild(peerNodeName);
+      document.querySelector('#watchers').appendChild(peerNode)
+    })
+    
+  } catch (error) {
+    
+  }
+}
+
+function updatePeerStatus(peer,status,error=""){
+  console.log('Updating Peer Status')
+  try {
+    document.getElementById(peer+'-status').innerText = (status=='ok')?'🟢':'🔴';
+    document.getElementById(peer+'-status').title = error;
+  } catch (error) {
+    
+  }
+}
+
+setInterval(()=>{
+  try{
+    document.getElementById('videoDesc').innerText=bingePack.desc;
+    document.getElementById('videoTitle').innerText=bingePack.title;
+    if(videoplayer.error){
+      ping({},'videoError')
+    }
+  }catch(e){}
+},1000)
 
 function startSeekCooldown(duration){
     clearTimeout(seekCooldownTimeout);
@@ -157,25 +204,35 @@ function ping(data,type){
 }
 
 videoplayer.addEventListener('pause', (event) => {
-  // console.log('Broadcasting Pause!');
-  // position = videoplayer.currentTime;
-  // ping({'position':position},'pause');
   ping({},'pause')
 });
 
 videoplayer.addEventListener('play', (event) => {
-  // console.log('Broadcasting Play!');
-  ping({},'play')
+  ping({},'play');
+  try {
+    document.querySelector('.start-container').style.display='none';
+  } catch (error) {
+    
+  }
 });
 
 videoplayer.addEventListener('complete', (event) => {
-  // console.log('Broadcasting Finish!');
   ping({},'complete')
 });
+
+videoplayer.addEventListener('error', (event) => {
+  ping({error:event.message},'videoError')
+});
+
+videoplayer.addEventListener('canplay', (event) => {
+  ping({},'videoSuccess')
+});
+
 
 videoplayer.addEventListener('seek', (event) => {
   videoplayer.pause();
 });
+
 
 videoplayer.addEventListener('seeked', (event) => {
   if(!seekCooldown){
@@ -265,8 +322,9 @@ function convertSrtCue(caption) {
 try {
   document.querySelector('.start-button').addEventListener('click',()=>{
     videoplayer.muted=false;
-    // videoplayer.buffer();
+    videoplayer.load();
     document.querySelector('.start-container').style.display='none';
+    
     ping({'ready':true},'ready');
   })
 
@@ -275,6 +333,40 @@ try {
     position = videoplayer.currentTime;
     ping({position:position},'seek');
   })
+
+
+  // UI
+
+  document.getElementById('RoomCode').innerText=roomId;
+
+  // Get references to the elements
+    const progressBar = document.querySelector('.progress-bar');
+    const startTimeElement = document.getElementById('startTime');
+    const endTimeElement = document.getElementById('endTime');
+
+    // Update the progress bar and timestamps on videoplayer playback
+    videoplayer.addEventListener('timeupdate', () => {
+
+      // Get the video duration in seconds
+    const videoplayerDuration = videoplayer.duration;
+        // Calculate the current progress
+        const progress = (videoplayer.currentTime / videoplayerDuration) * 100;
+
+        // Update the progress bar
+        progressBar.style.width = `${progress}%`;
+
+        // Update the start time
+        const currentTime = new Date(videoplayer.currentTime * 1000);
+        startTimeElement.textContent = currentTime.toISOString().substr(11, 8);
+
+        // Update the end time (if needed)
+        if (videoplayerDuration > 0) {
+            const endTime = new Date(videoplayerDuration * 1000);
+            endTimeElement.textContent = endTime.toISOString().substr(11, 8);
+        }
+    });
+
+
 } catch (error) {
   console.log("Play Error:",error)
 
@@ -300,8 +392,40 @@ try {
     pack = { ...bingePack }
     pack['video'] = url;
     pack['title'] = title;
+    pack['desc'] = document.getElementById('VideoDesc').value;
     ping(pack,'forceBingePack')
+    bingePack = pack;
+    videoplayer.src = bingePack.video;
   })
+
+  var adminBingePackResend = document.getElementById('binge-package');
+  adminBingePackResend.addEventListener('click',()=>{
+    videoplayer.setAttribute('src',bingePack.video);
+    adminBingePackResend.setAttribute('disabled',true);
+    ping({},'pause');
+    videoplayer.pause()
+    ping(bingePack,'forceBingePack')
+    setTimeout(()=>{
+      ping({position:position},'play');
+      videoplayer.play();
+      adminBingePackResend.removeAttribute('disabled');
+    },3000);
+  })
+
+  var adminSyncPlayback = document.getElementById('sync-now');
+adminSyncPlayback.addEventListener('click',()=>{
+  adminSyncPlayback.setAttribute('disabled',true);
+  position = videoplayer.currentTime;
+  ping({},'pause');
+  videoplayer.pause()
+  ping({position:position},'seek');
+  setTimeout(()=>{
+    ping({position:position},'play');
+    videoplayer.play();
+    adminSyncPlayback.removeAttribute('disabled');
+  },3000);
+})
+
 } catch (error) {
   console.log("Admin Error:",error)
 }
@@ -312,19 +436,7 @@ try {
 
 
 
-// var adminSyncPlayback = document.getElementById('sync-playback');
-// adminSyncPlayback.addEventListener('click',()=>{
-//   adminSyncPlayback.setAttribute('disabled',true);
-//   position = videoplayer.currentTime;
-//   ping({},'pause');
-//   videoplayer.pause()
-//   ping({position:position},'seek');
-//   setTimeout(()=>{
-//     ping({position:position},'play');
-//     videoplayer.play();
-//     adminSyncPlayback.setAttribute('disabled',false);
-//   },3000);
-// })
+
 
 
 

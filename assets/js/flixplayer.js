@@ -46,16 +46,18 @@ const video = document.getElementById('videoplayer');
             playPauseIcon.focus();
         }
 
-        function showControls() {
+        function showControls(duration=3000) {
             controlsOverlay.classList.remove('hide-controls');
             rewindBtn.classList.remove('hide-controls');
             forwardBtn.classList.remove('hide-controls');
             clearTimeout(hideControlsTimeout);
-            hideControlsTimeout = setTimeout(hideControls, 3000);
+            hideControlsTimeout = setTimeout(hideControls,duration );
         }
 
+        // controlsOverlay.addEventListener('mouseover',()=>{showControls()})
+
         // Show controls on mouse move
-        document.addEventListener('mousemove', showControls);
+        document.addEventListener('mousemove', ()=>{showControls()});
 
 
         // Initially start the timer to auto-hide controls
