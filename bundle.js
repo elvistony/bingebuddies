@@ -1,18 +1,16 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-var roomId = document.location.hash;
-console.log("Connecting to Room:",roomId)
 
-const trackerURL = 'wss://tracker.openwebtorrent.com';
+// Globals
+var roomId = document.location.hash;
 const P2PT = require('p2pt')
-const statusLed = document.getElementById('status-led');
-const statusText = document.getElementById('status-text');
 const videoplayer = document.getElementById('videoplayer');
 const selfId = Math.random().toString(36).slice(2);
 let p2pt;
 let seekCooldown = false;
-
 var Peers={};
+let seekCooldownTimeout;
 
+// Announcing Room
 init (roomId)
 
 var bingePack = {
@@ -21,23 +19,24 @@ var bingePack = {
     'video':"https://upload.wikimedia.org/wikipedia/commons/transcoded/7/74/Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm/Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm.480p.vp9.webm",
     'srt':"",
     'desc':"Now Binging",
-    'position':0
+    'position':0,
+    'unset':true,
 }
+
+// 
 
 videoplayer.src = bingePack.video;
 
-var peer_template = {
-    id:'',
-    peer:false
-}
+var peer_template = { id:'', peer:false }
+
 
 function init (roomId) {
     let announceURLs = [
-    "wss://tracker.sloppyta.co:443/announce",
+    // "wss://tracker.sloppyta.co:443/announce",
     "wss://tracker.novage.com.ua:443/announce",
     "wss://tracker.openwebtorrent.com",
-    "wss://tracker.webtorrent.io",
-    "wss://tracker.btorrent.xyz",
+    // "wss://tracker.webtorrent.io",
+    // "wss://tracker.btorrent.xyz",
     "wss://tracker.webtorrent.dev",
     "ws://tracker.files.fm:7072/announce",
     "udp://tracker.opentrackr.org:1337/announce",
@@ -55,124 +54,87 @@ function listen () {
     // Handle peer connection and messages
     p2pt.on('peerconnect', (peer) => {
         console.log(`Connected to ${peer.id}`);
-        Peers[peer.id] = Object.assign({},peer_template);
+
+        if(peer==undefined || peer.id==null){ return }
+        Peers[peer.id] = {...peer_template}
         Peers[peer.id].peer = peer;
-        // Change status to green
-        statusLed.style.backgroundColor = 'green';
-        statusText.innerText = `Connected to peer: ${peer.id}`;
 
         // Send BingePack
         ping(bingePack,'bingepack');
-        videoplayer.setAttribute("src", bingePack.video);
-
-        
         ping({position:videoplayer.currentTime},'seek');
-        
-
-
     });
 
     p2pt.on('peerclose', (peer) => {
         delete Peers[peer.id]
         console.log(`Disconnected from ${peer.id}`);
-        if(Object.keys(Peers).length==0){
-                  // Change status to red
-        statusLed.style.backgroundColor = 'red';
-        statusText.innerText = 'Not connected to any peer';
-        }
+        // if(Object.keys(Peers).length==0){  } // LED goes RED
     });
 
     p2pt.on('msg', (peer, msg) => {
-        console.log('RECEIVE:',peer,msg)
+        // console.log('RECEIVE:',peer,msg)
         const data = JSON.parse(msg);
-        
-        // if (data.type === 'sync' && !isHost) {
-        //     // Sync video playback
-        //     videoPlayer.currentTime = data.currentTime;
-        //     if (data.isPlaying) {
-        //         videoPlayer.play();
-        //     } else {
-        //         videoPlayer.pause();
-        //     }
-        // }
-        if(data.type == "bingepack"){
-            // playerInstance.load([{
-            //     file: data.video,
-            //     image: data.image,
-            //     title: data.title,
-            //     description: data.desc
-            // }]);
-            console.log('Binge Pack Recieved');
-            videoplayer.setAttribute("src", data.video);
+        if(data.type == "welcomeBingePack"){
+            if(bingePack.unset){
+              console.log('Setting New Bingepack');
+              bingePack = data;
+              bingePack.unset=false;
+              videoplayer.setAttribute("src", bingePack.video);
+            }else{console.log('Already received Welcome Bingepack');}  
+        }
+        if(data.type == "forceBingePack"){
+            console.log('Forced Binge Pack Recieved');
+            bingePack.unset=false;
             bingePack = data;
+            videoplayer.setAttribute("src", bingePack.video);
+            
         }
-        if(data.from == selfId){
-            return;
-        }
-        if(data.type == "play"){
-            // playerInstance.play();
-            videoplayer.play()
-        }
-        if(data.type == "pause"){
-            // playerInstance.pause();
-            videoplayer.pause()
-        }
+        if(data.from == selfId){ return; }
+        if(data.type == "play"){  videoplayer.play(); }
+        if(data.type == "pause"){ videoplayer.pause() }
         if(data.type == "seek"){
-            if(!seekCooldown){
-                seekCooldown=true
-                startSeekCooldown(5);
-            }
-            // playerInstance.seek(data.position);
-            videoplayer.currentTime = data.position;
+            if(!seekCooldown){ startSeekCooldown(5); }
+            // videoplayer.currentTime = data.position;
+            seeker(data.position)
             videoplayer.pause();
-        }
-        
+        }  
     });
     p2pt.start()
-  
-  // End of Application Code
 }
 
 function startSeekCooldown(duration){
+    clearTimeout(seekCooldownTimeout);
     seekCooldown = true;
-    setTimeout(()=>{
+    seekCooldownTimeout = setTimeout(()=>{
         seekCooldown=false;
     },duration)
 }
 
 function ping(data,type){
-    console.log('SEND:',data,type);
-      Object.keys(Peers).forEach(peer => {
-            console.log('SEND TO PEER:',peer);
-            data['from'] = selfId;
-            data['type'] = type
-            p2pt.send(Peers[peer].peer, JSON.stringify(data));
-            Peers[peer.id] = Object.assign({},peer_template);
-            Peers[peer.id].peer = peer;
-            console.log(Peers);
-      });
-    
+  Object.keys(Peers).forEach(peer => {
+    data['from'] = selfId;
+    data['type'] = type
+    p2pt.send(Peers[peer].peer, JSON.stringify(data));
+  });
 }
 
 videoplayer.addEventListener('pause', (event) => {
-  console.log('Broadcasting Pause!');
+  // console.log('Broadcasting Pause!');
   ping({},'pause')
 });
 
 videoplayer.addEventListener('play', (event) => {
-  console.log('Broadcasting Play!');
+  // console.log('Broadcasting Play!');
   ping({},'play')
 });
 
 videoplayer.addEventListener('complete', (event) => {
-  console.log('Broadcasting Finish!');
+  // console.log('Broadcasting Finish!');
   ping({},'complete')
 });
 
 videoplayer.addEventListener('seek', (event) => {
   videoplayer.pause();
 });
-
 
 videoplayer.addEventListener('seeked', (event) => {
   if(!seekCooldown){
@@ -182,37 +144,77 @@ videoplayer.addEventListener('seeked', (event) => {
   }
 });
 
+videoplayer.addEventListener('canplaythrough',()=>{
+  // ping({'ready':true},'ready');
+  // document.querySelector('.start-container').style.display='none';
+})
+
+document.querySelector('.start-button').addEventListener('click',()=>{
+  videoplayer.muted=false;
+  // videoplayer.buffer();
+  document.querySelector('.start-container').style.display='none';
+  ping({'ready':true},'ready');
+})
+
 
 var adminVideoChange = document.getElementById('fire-video-change');
-
 adminVideoChange.addEventListener('click',()=>{
   var url = document.getElementById('VideoURL').value;
   var title = document.getElementById('VideoTitle').value;
   pack = { ...bingePack }
   pack['video'] = url;
   pack['title'] = title;
-  ping(pack,'bingepack')
+  ping(pack,'forceBingePack')
 })
 
+function isIOSDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
 
-var adminSyncPlayback = document.getElementById('sync-playback');
+function seeker(X){
+  if(!isIOSDevice()) {
+      videoplayer.currentTime = X;
+  } else {
+    // function trackTo(evt) {
+    //     evt.target.currentTime = X;
+    //     evt.target.removeEventListener("loadeddata", trackTo)
+    // }
+    // videoplayer.addEventListener("loadeddata", trackTo);
+    videoplayer.fastSeek(X)
+  }
+}
 
-adminSyncPlayback.addEventListener('click',()=>{
 
-  videoplayer.setAttribute('src',bingePack.video);
+// var adminSyncPlayback = document.getElementById('sync-playback');
+// adminSyncPlayback.addEventListener('click',()=>{
+//   adminSyncPlayback.setAttribute('disabled',true);
+//   position = videoplayer.currentTime;
+//   ping({},'pause');
+//   videoplayer.pause()
+//   ping({position:position},'seek');
+//   setTimeout(()=>{
+//     ping({position:position},'play');
+//     videoplayer.play();
+//     adminSyncPlayback.setAttribute('disabled',false);
+//   },3000);
+// })
 
-  adminSyncPlayback.setAttribute('disabled',true);
-  position = videoplayer.currentTime;
-  
-  ping({},'pause');
-  videoplayer.pause()
-  ping({position:position},'seek');
-  setTimeout(()=>{
-    ping({position:position},'play');
-    videoplayer.play();
-    adminSyncPlayback.setAttribute('disabled',false);
-  },3000);
-})
+
+
+// var adminBingePackResend = document.getElementById('binge-package');
+// adminBingePackResend.addEventListener('click',()=>{
+//   videoplayer.setAttribute('src',bingePack.video);
+//   adminBingePackResend.setAttribute('disabled',true);
+//   ping({},'pause');
+//   videoplayer.pause()
+//   ping(bingePack,'forceBingePack')
+//   setTimeout(()=>{
+//     ping({position:position},'play');
+//     videoplayer.play();
+//     adminBingePackResend.removeAttribute('disabled');
+//   },3000);
+// })
+
 
 // playerInstance.on("ready", function () {
 //     const buttonId = "upload-link";

@@ -135,3 +135,14 @@ body {
     width: 50px !important;
     height: 50px !important;
 }
+
+.start-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.start-button {
+    padding: 10px 20px;
+    font-size: 18px;
+}
