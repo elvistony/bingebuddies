@@ -23,12 +23,8 @@ var bingePack = {
     'unset':true,
 }
 
-// 
-
 videoplayer.src = bingePack.video;
-
 var peer_template = { id:'', peer:false }
-
 
 function init (roomId) {
     let announceURLs = [
@@ -73,6 +69,7 @@ function listen () {
     p2pt.on('msg', (peer, msg) => {
         // console.log('RECEIVE:',peer,msg)
         const data = JSON.parse(msg);
+        const isVideoPlaying = videoplayer => !!(videoplayer.currentTime > 0 && !videoplayer.paused && !videoplayer.ended && videoplayer.readyState > 2);
         if(data.type == "welcomeBingePack"){
             if(bingePack.unset){
               console.log('Setting New Bingepack');
@@ -85,17 +82,29 @@ function listen () {
             console.log('Forced Binge Pack Recieved');
             bingePack.unset=false;
             bingePack = data;
-            videoplayer.setAttribute("src", bingePack.video);
-            
+            videoplayer.setAttribute("src", bingePack.video);  
         }
         if(data.from == selfId){ return; }
-        if(data.type == "play"){  videoplayer.play(); }
-        if(data.type == "pause"){ videoplayer.pause() }
+        if(data.type == "play"){ 
+          if(!isVideoPlaying){
+            videoplayer.play(); 
+          } 
+        }
+        if(data.type == "pause"){ 
+          if(isVideoPlaying){
+            videoplayer.pause(); 
+          } 
+          // seeker(data.position)
+        }
         if(data.type == "seek"){
             if(!seekCooldown){ startSeekCooldown(5); }
-            // videoplayer.currentTime = data.position;
-            seeker(data.position)
-            videoplayer.pause();
+            if(data.position>0){
+              seeker(data.position)
+            }
+              
+            if(isVideoPlaying){
+              videoplayer.pause();
+            }
         }  
     });
     p2pt.start()
@@ -119,6 +128,8 @@ function ping(data,type){
 
 videoplayer.addEventListener('pause', (event) => {
   // console.log('Broadcasting Pause!');
+  // position = videoplayer.currentTime;
+  // ping({'position':position},'pause');
   ping({},'pause')
 });
 
@@ -155,6 +166,13 @@ document.querySelector('.start-button').addEventListener('click',()=>{
   document.querySelector('.start-container').style.display='none';
   ping({'ready':true},'ready');
 })
+
+document.querySelector('#syncNow').addEventListener('click',()=>{
+  console.log('Syncing Timestamp...')
+  position = videoplayer.currentTime;
+  ping({position:position},'seek');
+})
+
 
 
 var adminVideoChange = document.getElementById('fire-video-change');
