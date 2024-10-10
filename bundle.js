@@ -17,7 +17,7 @@ var bingePack = {
     'title':"Sprite Fright",
     'cover':"https://i.ytimg.com/vi/_cMxraX_5RE/maxresdefault.jpg",
     'video':"https://vod.cf.dmcdn.net/sec2(XJkW6WD8oA89Lm0fqApRru8eSYD7YIzFSJQCO6mCEgm4bQR6hjdYauil4lMB3U-ACxMdtZwS9Z2oJQ-3h0K_NOZvNtcN5uV_nbDVeFE34yB1Dw-yZxcVsU3U0ueDpeo-qyo1J3wMoFyB1gE9PfcuGMpUyk7-J_4I1n0kmw-54FhNDTJ2WbL_lILguOQO2yr5)/video/442/474/555474244_mp4_h264_aac_hq_3.mp4#cell=cf",
-    'srt':"https://static2.dmcdn.net/static/video/442/474/555474244_subtitle_en-auto.srt",
+    // 'srt':"https://static2.dmcdn.net/static/video/442/474/555474244_subtitle_en-auto.srt",
     'desc':"Now Binging",
     'position':0,
     'unset':true,
