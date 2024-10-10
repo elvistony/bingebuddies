@@ -97,4 +97,4 @@ const video = document.getElementById('videoplayer');
 
         
 
-        playPauseIcon.focus();
+        document.querySelector('.start-button').focus();

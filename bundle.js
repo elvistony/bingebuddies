@@ -16,14 +16,24 @@ init (roomId)
 var bingePack = {
     'title':"Sprite Fright",
     'cover':"https://i.ytimg.com/vi/_cMxraX_5RE/maxresdefault.jpg",
-    'video':"https://upload.wikimedia.org/wikipedia/commons/transcoded/7/74/Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm/Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm.480p.vp9.webm",
-    'srt':"",
+    'video':"https://vod.cf.dmcdn.net/sec2(XJkW6WD8oA89Lm0fqApRru8eSYD7YIzFSJQCO6mCEgm4bQR6hjdYauil4lMB3U-ACxMdtZwS9Z2oJQ-3h0K_NOZvNtcN5uV_nbDVeFE34yB1Dw-yZxcVsU3U0ueDpeo-qyo1J3wMoFyB1gE9PfcuGMpUyk7-J_4I1n0kmw-54FhNDTJ2WbL_lILguOQO2yr5)/video/442/474/555474244_mp4_h264_aac_hq_3.mp4#cell=cf",
+    'srt':"//vod.cf.dmcdn.net/sec2(k3v7tClvUlOOxSQt43jP2dzmQrTZnT-IeiG5nmteg6kdDh2stKCLKBGGOify1-ETY_8BD_fQ5kU1CpSN-TO1HExv1vHd12Z3xiAmEcLVWYKo5g8oYpWYSfzTElkt5KWUIQTLgx6g41aREk0XzkSRYcj3kns6d4NAxegjwZoOPLVAfGmthKiv6qGCRscPhg_D)/video/442/474/555474244_mp4_h264_aac_hq_3.m3u8#cell=cf",
     'desc':"Now Binging",
     'position':0,
     'unset':true,
 }
 
 videoplayer.src = bingePack.video;
+if(bingePack.srt){
+  const track = document.createElement('track');
+  // Set the track's kind, label, and src attributes
+  track.kind = 'captions';
+  track.label = 'English';
+  track.src = bingePack.srt;
+  // track.default = true;
+  videoplayer.appendChild(track);
+  
+}
 var peer_template = { id:'', peer:false }
 
 function init (roomId) {
@@ -67,9 +77,10 @@ function listen () {
     });
 
     p2pt.on('msg', (peer, msg) => {
-        // console.log('RECEIVE:',peer,msg)
+        console.log('RECEIVE:',peer,msg)
         const data = JSON.parse(msg);
-        const isVideoPlaying = videoplayer => !!(videoplayer.currentTime > 0 && !videoplayer.paused && !videoplayer.ended && videoplayer.readyState > 2);
+        var isVideoPlaying = videoplayer => !!(videoplayer.currentTime > 0 && !videoplayer.paused && !videoplayer.ended && videoplayer.readyState > 2);
+        isVideoPlaying = (!videoplayer.paused && !videoplayer.ended)
         if(data.type == "welcomeBingePack"){
             if(bingePack.unset){
               console.log('Setting New Bingepack');
@@ -105,6 +116,15 @@ function listen () {
             if(isVideoPlaying){
               videoplayer.pause();
             }
+        }
+        if(data.type == "subs"){ 
+          const track = document.createElement('track');
+          // Set the track's kind, label, and src attributes
+          track.kind = 'captions';
+          track.label = 'English';
+          track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent(data.content);
+          videoplayer.appendChild(track);
+          // seeker(data.position)
         }  
     });
     p2pt.start()
@@ -119,6 +139,7 @@ function startSeekCooldown(duration){
 }
 
 function ping(data,type){
+  console.log('SEND:',type,data)
   Object.keys(Peers).forEach(peer => {
     data['from'] = selfId;
     data['type'] = type
@@ -202,6 +223,63 @@ function seeker(X){
   }
 }
 
+// Subtitles 
+
+function addSubtitles(videoElement, srtContent) {
+  // Create a new track element
+  const track = document.createElement('track');
+
+  // Set the track's kind, label, and src attributes
+  track.kind = 'captions';
+  track.label = 'English';
+  track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent(srtToVtt(srtContent));
+
+  // Add the track to the video element
+  videoElement.appendChild(track);
+}
+
+function srtToVtt(srtContent) {
+  // Convert SRT content to VTT format
+  const lines = srtContent.split('\n');
+  let vttContent = 'WEBVTT\n\n';
+
+  let cueNumber = 1;
+  let startTime = '';
+  let endTime = '';
+  let text = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    if (line.match(/^\d+$/)) {
+      // Start of a new cue
+      cueNumber = parseInt(line);
+    } else if (line.match(/^\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}$/)) {
+      // Timestamps for the cue
+      const timestamps = line.split(' --> ');
+      startTime = timestamps[0];
+      endTime = timestamps[1];
+    } else {
+      // Text for the cue
+      text += line + '\n';
+    }
+
+    if (i === lines.length - 1 || lines[i + 1].match(/^\d+$/)) {
+      // End of the cue
+      vttContent += cueNumber + '\n' + startTime + ' --> ' + endTime + '\n' + text + '\n\n';
+      text = '';
+    }
+  }
+
+  return vttContent;
+}
+
+document.querySelector('#subtitlePush').addEventListener('click',()=>{
+  subPack = {}
+  subPack['content'] = srtToVtt(srtContent);
+  ping(subPack,'subs');
+  // track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent();
+})
 
 // var adminSyncPlayback = document.getElementById('sync-playback');
 // adminSyncPlayback.addEventListener('click',()=>{

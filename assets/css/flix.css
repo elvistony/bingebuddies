@@ -145,4 +145,8 @@ body {
 .start-button {
     padding: 10px 20px;
     font-size: 18px;
+    opacity: 0.8;
+    border-radius: 50px;
+    border: none;
+    
 }
