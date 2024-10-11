@@ -14,15 +14,42 @@ let seekCooldownTimeout;
 init (roomId)
 
 var bingePack = {
-    'title':"BingeBuddies",
+    'title':"BingeBud",
     'video':"#",
     // 'srt':"https://static2.dmcdn.net/static/video/442/474/555474244_subtitle_en-auto.srt",
-    'desc':"Now Binging",
+    'desc':"Searching for Peers",
     'position':0,
     'unset':true,
 }
 
-videoplayer.src = bingePack.video;
+
+function changeVideoSource(url){
+  videoSource = document.createElement('source')
+  videoSource.src=bingePack.video;
+  videoSource.type="application/x-mpegURL";
+  videoplayer.setAttribute('loop',false);
+  videoplayer.appendChild(videoSource);
+  bingePack.unset=false;
+  if (Hls.isSupported()) {
+    var video = document.getElementById('videoplayer');
+
+    // If you are using the ESM version of the library (hls.mjs), you
+    // should specify the "workerPath" config option here if you want
+    // web workers to be used. Note that bundlers (such as webpack)
+    // will likely use the ESM version by default.
+  
+    var hls = new Hls();
+      
+    // bind them together
+    hls.attachMedia(video);
+    hls.loadSource(video.src);
+    // MEDIA_ATTACHED event is fired by hls object once MediaSource is ready
+    hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+      console.log('video and hls.js are now bound together !');
+    });
+  }
+}
+
 if(bingePack.srt){
   const track = document.createElement('track');
   // Set the track's kind, label, and src attributes
@@ -395,7 +422,8 @@ try {
     pack['desc'] = document.getElementById('VideoDesc').value;
     ping(pack,'forceBingePack')
     bingePack = pack;
-    videoplayer.src = bingePack.video;
+    changeVideoSource(bingePack.video)
+    // videoplayer.src = bingePack.video;
   })
 
   var adminBingePackResend = document.getElementById('binge-package');
