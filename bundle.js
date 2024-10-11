@@ -2,12 +2,16 @@
 
 // Globals
 var roomId = document.location.hash;
+if(roomId=="" || roomId=="/"){
+  roomId="PUBLIC"
+}
 const P2PT = require('p2pt')
 const videoplayer = document.getElementById('videoplayer');
 const selfId = Math.random().toString(36).slice(2);
 let p2pt;
 let seekCooldown = false;
 var Peers={};
+var PeersPacks={};
 let seekCooldownTimeout;
 
 // Announcing Room
@@ -16,19 +20,22 @@ init (roomId)
 var bingePack = {
     'title':"BingeBud",
     'video':"#",
-    // 'srt':"https://static2.dmcdn.net/static/video/442/474/555474244_subtitle_en-auto.srt",
-    'desc':"Searching for Peers",
+    'desc':"",
     'position':0,
     'unset':true,
 }
 
 
 function changeVideoSource(url){
-  videoSource = document.createElement('source')
-  videoSource.src=bingePack.video;
-  videoSource.type="application/x-mpegURL";
-  videoplayer.setAttribute('loop',false);
-  videoplayer.appendChild(videoSource);
+  videoplayer.src=url;
+  // videoSource = document.createElement('source')
+  // videoSource.src=url;
+  // // videoSource.type="application/x-mpegURL";
+  // videoSource.type="video/mp4";
+  // videoplayer.removeAttribute('src');
+  // videoplayer.setAttribute('loop',false);
+  // videoplayer.appendChild(videoSource);
+  videoplayer.load();
   bingePack.unset=false;
   if (Hls.isSupported()) {
     var video = document.getElementById('videoplayer');
@@ -42,7 +49,7 @@ function changeVideoSource(url){
       
     // bind them together
     hls.attachMedia(video);
-    hls.loadSource(video.src);
+    hls.loadSource(url);
     // MEDIA_ATTACHED event is fired by hls object once MediaSource is ready
     hls.on(Hls.Events.MEDIA_ATTACHED, function () {
       console.log('video and hls.js are now bound together !');
@@ -50,15 +57,15 @@ function changeVideoSource(url){
   }
 }
 
-if(bingePack.srt){
-  const track = document.createElement('track');
-  // Set the track's kind, label, and src attributes
-  track.kind = 'captions';
-  track.label = 'English';
-  track.src = bingePack.srt;
-  // track.default = true;
-  videoplayer.appendChild(track);
-}
+// if(bingePack.srt){
+//   const track = document.createElement('track');
+//   // Set the track's kind, label, and src attributes
+//   track.kind = 'captions';
+//   track.label = 'English';
+//   track.src = bingePack.srt;
+//   // track.default = true;
+//   videoplayer.appendChild(track);
+// }
 
 
 var peer_template = { id:'', peer:false }
@@ -116,7 +123,7 @@ function listen () {
               console.log('Setting New Bingepack');
               bingePack = data;
               bingePack.unset=false;
-              videoplayer.setAttribute("src", bingePack.video);
+              changeVideoSource(bingePack.video)
               videoplayer.load();
             }else{console.log('Already received Welcome Bingepack');}  
         }
@@ -124,8 +131,9 @@ function listen () {
             console.log('Forced Binge Pack Recieved');
             bingePack.unset=false;
             bingePack = data;
-            videoplayer.setAttribute("src", bingePack.video);  
-            videoplayer.load();
+            // videoplayer.setAttribute("src", bingePack.video);  
+            // videoplayer.load();
+            changeVideoSource(bingePack.video)
         }
         if(data.from == selfId){ return; }
         if(data.type == "play"){ 
@@ -139,6 +147,7 @@ function listen () {
           } 
           // seeker(data.position)
         }
+        
         if(data.type == "seek"){
             if(!seekCooldown){ startSeekCooldown(5); }
             if(data.position>0){
@@ -154,8 +163,10 @@ function listen () {
         }
         if(data.type == "videoSuccess"){
             updatePeerStatus(peer.id,'ok')
+        }if(data.type == 'healthreport'){
+          PeersPacks[peer.id]=data.pack;
+          console.log('got a pack',data.pack);
         }
-
         if(data.type == "subs"){ 
           const track = document.createElement('track');
           // Set the track's kind, label, and src attributes
@@ -170,37 +181,82 @@ function listen () {
     p2pt.start()
 }
 
+function applyBingePack(){
+  console.log('Applying',)
+  changeVideoSource(bingePack.video);
+}
+
+
+
 function updatePeerCount(){
   document.getElementById('membersCount').innerText=Object.keys(Peers).length;
   document.querySelector('#watchers').innerHTML=''
   try {
+
     Object.keys(Peers).forEach((peer)=>{
-      var peerNode = document.createElement('li');
-      var peerNodeStatus = document.createElement('span');
-      var peerNodeName = document.createElement('span');
-      peerNodeStatus.setAttribute('id',peer+'-status');
-      peerNodeStatus.innerText='🟡'; //🔴🟢
-      peerNodeName.innerText = peer;
-      peerNode.setAttribute('id',peer+'-element');
-      peerNode.classList.add('list-group-item');
-      peerNode.appendChild(peerNodeStatus);
-      peerNode.appendChild(peerNodeName);
-      document.querySelector('#watchers').appendChild(peerNode)
+
+      var code = `
+<div class="peer text-center p-2" id="${peer}-element">
+  <div class="p-2 border rounded bg-dark text-white mb-2">
+    <i class="fa fa-tv h1"></i> <i class="fa fa-info-circle text-info" title="${peer}"></i>
+    <p><small>STATUS: </small><i id="${peer}-status" class="fa fa-wifi text-warning"></i><span></span></p>
+  </div>
+  <p class="bg-secondary  rounded p-2">
+    <button class="btn btn-sm button btn-info" name="${peer}-getpack" action="haveapack?" title="Fetch Binge Package"><i class="fa fa-box" name="${peer}-getpack"></i></button>
+    <button class="btn btn-sm button btn-danger" title="Kick"><i class="fa fa-close"></i></button>
+  </p>
+</div>`;
+    var peerNode = document.createElement('div');
+    peerNode.innerHTML=code;
+    document.querySelector('#watchers').appendChild(peerNode)
+      // var peerNode = document.createElement('li');
+      // var peerNodeStatus = document.createElement('span');
+      // var peerNodeName = document.createElement('span');
+      // peerNodeStatus.setAttribute('id',peer+'-status');
+      // peerNodeStatus.innerText='🟡'; //🔴🟢
+      // peerNodeName.innerText = peer;
+      // peerNode.setAttribute('id',peer+'-element');
+      // peerNode.classList.add('list-group-item');
+      // peerNode.appendChild(peerNodeStatus);
+      // peerNode.appendChild(peerNodeName);
+      // document.querySelector('#watchers').appendChild(peerNode)
     })
-    
+    loadWatcherPackEnabler()
   } catch (error) {
     
   }
 }
 
 function updatePeerStatus(peer,status,error=""){
-  console.log('Updating Peer Status')
+  // console.log('Updating Peer Status')
   try {
-    document.getElementById(peer+'-status').innerText = (status=='ok')?'🟢':'🔴';
-    document.getElementById(peer+'-status').title = error;
+    document.getElementById(peer+'-status').classList.remove(['text-warning','text-success','text-danger'])
+    document.getElementById(peer+'-status').classList.add([(status=='ok')?'text-success':'text-danger']);
+    // document.getElementById(peer+'-status').innerText = (status=='ok')?'🟢':'🔴';
+    // document.getElementById(peer+'-status').title = error;
   } catch (error) {
     
   }
+}
+
+function loadWatcherPackEnabler(){
+  try {
+    document.querySelectorAll('[action="haveapack?"]').forEach(element => {
+      element.removeEventListener('click',loadWatcherPackButtonListener);
+      element.addEventListener('click',loadWatcherPackButtonListener);
+    });
+  } catch (error) {
+    
+  }
+}
+
+
+function loadWatcherPackButtonListener(event){
+  var peer_id = event.target.getAttribute('name').replace('-getpack','');
+  console.log("Loading Pack from: ",peer_id);
+  bingePack = PeersPacks[peer_id];
+  console.log(PeersPacks[peer_id]);
+  applyBingePack();
 }
 
 setInterval(()=>{
@@ -208,10 +264,14 @@ setInterval(()=>{
     document.getElementById('videoDesc').innerText=bingePack.desc;
     document.getElementById('videoTitle').innerText=bingePack.title;
     if(videoplayer.error){
-      ping({},'videoError')
+      ping({},'videoError');
+    }else{
+      // ping({pack:bingePack},'healthreport');
     }
   }catch(e){}
 },1000)
+
+
 
 function startSeekCooldown(duration){
     clearTimeout(seekCooldownTimeout);
@@ -228,6 +288,11 @@ function ping(data,type){
     data['type'] = type
     p2pt.send(Peers[peer].peer, JSON.stringify(data));
   });
+}
+
+function targetPing(data,type,target){
+  console.log('SEND TO TARGET:',target,type,data)
+  p2pt.send(Peers[target].peer, JSON.stringify(data));
 }
 
 videoplayer.addEventListener('pause', (event) => {
@@ -441,7 +506,7 @@ try {
   })
 
   var adminSyncPlayback = document.getElementById('sync-now');
-adminSyncPlayback.addEventListener('click',()=>{
+  adminSyncPlayback.addEventListener('click',()=>{
   adminSyncPlayback.setAttribute('disabled',true);
   position = videoplayer.currentTime;
   ping({},'pause');
@@ -452,7 +517,8 @@ adminSyncPlayback.addEventListener('click',()=>{
     videoplayer.play();
     adminSyncPlayback.removeAttribute('disabled');
   },3000);
-})
+});
+
 
 } catch (error) {
   console.log("Admin Error:",error)

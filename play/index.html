@@ -42,8 +42,8 @@
             </div>
             
             <div class="right-controls">
-                <button class="control-button control-button-mini" id="volume-control">
-                    <i class="fas fa-upload"></i>
+                <button class="control-button control-button-mini" is="google-cast-button"  id="volume-control">
+                    <i class="fas fa-wifi"></i>
                 </button>
                 <button class="control-button control-button-mini" id="syncNow">
                     <i class="fas fa-refresh" ></i>
@@ -60,6 +60,40 @@
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script> -->
+<script>
+window.__onGCastApiAvailable = function(isAvailable) {
+    if (!isAvailable) {
+        return false;
+    }
 
+    var castContext = cast.framework.CastContext.getInstance();
+
+    castContext.setOptions({
+        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID
+    });
+
+    var stateChanged = cast.framework.CastContextEventType.CAST_STATE_CHANGED;
+    castContext.addEventListener(stateChanged, function(event) {
+        var castSession = castContext.getCurrentSession();
+        
+        // Create a media info object with a webpage URL
+        var media = new chrome.cast.media.MediaInfo(document.location, 'text/html');
+        
+        var request = new chrome.cast.media.LoadRequest(media);
+
+        castSession && castSession
+            .loadMedia(request)
+            .then(function() {
+                console.log('Success');
+            })
+            .catch(function(error) {
+                console.log('Error: ' + error);
+            });
+    });
+};
+
+</script>
+<script src='https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1'></script>
 </body>
 </html>
