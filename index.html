@@ -42,6 +42,7 @@
       })
     </script>
     <script>
+      let baseURL_prefix = 'https://elvistony.dev/bingebuddies/';
       window.__onGCastApiAvailable = function(isAvailable) {
           if (!isAvailable) {
               return false;
@@ -59,7 +60,7 @@
               var castSession = castContext.getCurrentSession();
               
               // Create a media info object with a webpage URL
-              var media = new chrome.cast.media.MediaInfo(document.location, 'text/html');
+              var media = new chrome.cast.media.MediaInfo(baseURL_prefix+"play/#/"+roomId), 'text/html');
               
               var request = new chrome.cast.media.LoadRequest(media);
       
