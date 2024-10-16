@@ -26,35 +26,40 @@ var bingePack = {
 }
 
 
+
 function changeVideoSource(url){
-  videoplayer.src=url;
+  var player = videojs(videoplayer);
+  type = bingePack.type;
+  player.src({
+    src: url,
+    //  type: 'video/mp4'/*video type*/
+  });
+  player.fill(true)
+  player.play();
   // videoSource = document.createElement('source')
   // videoSource.src=url;
-  // // videoSource.type="application/x-mpegURL";
-  // videoSource.type="video/mp4";
+  // if(type=='m3u8'){
+  //   videoSource.type="application/x-mpegURL";
+  // //   if (Hls.isSupported()) {
+  // //   var video = document.getElementById('videoplayer');
+  // //   var hls = new Hls();
+  // //   hls.attachMedia(video);
+  // //   hls.loadSource(url);
+  // //   hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+  // //     console.log('video and hls.js are now bound together !');
+  // //   });
+  // // }
+  // }else{
+  //   videoSource.type="video/mp4";
+  // }
+  // videoplayer.innerHTML='';
   // videoplayer.removeAttribute('src');
-  // videoplayer.setAttribute('loop',false);
   // videoplayer.appendChild(videoSource);
+  
+
   videoplayer.load();
   bingePack.unset=false;
-  if (Hls.isSupported()) {
-    var video = document.getElementById('videoplayer');
-
-    // If you are using the ESM version of the library (hls.mjs), you
-    // should specify the "workerPath" config option here if you want
-    // web workers to be used. Note that bundlers (such as webpack)
-    // will likely use the ESM version by default.
   
-    var hls = new Hls();
-      
-    // bind them together
-    hls.attachMedia(video);
-    hls.loadSource(url);
-    // MEDIA_ATTACHED event is fired by hls object once MediaSource is ready
-    hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-      console.log('video and hls.js are now bound together !');
-    });
-  }
 }
 
 // if(bingePack.srt){
@@ -484,6 +489,7 @@ try {
     pack = { ...bingePack }
     pack['video'] = url;
     pack['title'] = title;
+    pack['type'] = document.getElementById('VideoURLType').value;
     pack['desc'] = document.getElementById('VideoDesc').value;
     ping(pack,'forceBingePack')
     bingePack = pack;

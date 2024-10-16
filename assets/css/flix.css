@@ -53,6 +53,11 @@ body {
     cursor: pointer;
 }
 
+#videoplayer > video{
+    width: 100%;
+    height: 100%;
+}
+
 .progress-bar-container {
     position: relative;
     margin-top: 5px;
