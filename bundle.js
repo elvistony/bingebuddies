@@ -25,6 +25,18 @@ var bingePack = {
     'unset':true,
 }
 
+// To stop unending reflection
+var heard = {
+  'seeking':false,
+  'playing':false,
+  'paused':false,
+}
+
+var justme = {
+  'seeking':false,
+  'playing':false,
+  'paused':false,
+}
 
 
 function changeVideoSource(url){
@@ -32,64 +44,27 @@ function changeVideoSource(url){
   type = bingePack.type;
   player.src({
     src: url,
-    //  type: 'video/mp4'/*video type*/
   });
   player.fill(true)
+  videoplayer.removeAttribute('loop');
+  videoplayer.removeAttribute('autoplay');
   player.play();
-  // videoSource = document.createElement('source')
-  // videoSource.src=url;
-  // if(type=='m3u8'){
-  //   videoSource.type="application/x-mpegURL";
-  // //   if (Hls.isSupported()) {
-  // //   var video = document.getElementById('videoplayer');
-  // //   var hls = new Hls();
-  // //   hls.attachMedia(video);
-  // //   hls.loadSource(url);
-  // //   hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-  // //     console.log('video and hls.js are now bound together !');
-  // //   });
-  // // }
-  // }else{
-  //   videoSource.type="video/mp4";
-  // }
-  // videoplayer.innerHTML='';
-  // videoplayer.removeAttribute('src');
-  // videoplayer.appendChild(videoSource);
-  
-
   videoplayer.load();
   bingePack.unset=false;
   
 }
 
-// if(bingePack.srt){
-//   const track = document.createElement('track');
-//   // Set the track's kind, label, and src attributes
-//   track.kind = 'captions';
-//   track.label = 'English';
-//   track.src = bingePack.srt;
-//   // track.default = true;
-//   videoplayer.appendChild(track);
-// }
-
-
 var peer_template = { id:'', peer:false }
 
 function init (roomId) {
     let announceURLs = [
-    // "wss://tracker.sloppyta.co:443/announce",
     "wss://tracker.novage.com.ua:443/announce",
     "wss://tracker.openwebtorrent.com",
-    // "wss://tracker.webtorrent.io",
-    // "wss://tracker.btorrent.xyz",
     "wss://tracker.webtorrent.dev",
     "ws://tracker.files.fm:7072/announce",
     "udp://tracker.opentrackr.org:1337/announce",
-    // "wss://tracker.novage.com.ua",
     "wss://tracker.files.fm:7073/announce",
-    // "wss://tracker.openwebtorrent.com",
-    // "wss://tracker.btorrent.xyz",
-    // "wss://tracker.fastcast.nz"
+    'wss://tracker.openwebtorrent.com:443/announce'
     ]
     p2pt = new P2PT(announceURLs, 'bingebuddies'+roomId)
     listen ();
@@ -128,7 +103,7 @@ function listen () {
               console.log('Setting New Bingepack');
               bingePack = data;
               bingePack.unset=false;
-              changeVideoSource(bingePack.video)
+              applyBingePack()
               videoplayer.load();
             }else{console.log('Already received Welcome Bingepack');}  
         }
@@ -136,17 +111,17 @@ function listen () {
             console.log('Forced Binge Pack Recieved');
             bingePack.unset=false;
             bingePack = data;
-            // videoplayer.setAttribute("src", bingePack.video);  
-            // videoplayer.load();
-            changeVideoSource(bingePack.video)
+            applyBingePack()
         }
         if(data.from == selfId){ return; }
         if(data.type == "play"){ 
+          heard.playing=true;
           if(!isVideoPlaying){
             videoplayer.play(); 
           } 
         }
         if(data.type == "pause"){ 
+          heard.paused=true;
           if(isVideoPlaying){
             videoplayer.pause(); 
           } 
@@ -154,11 +129,11 @@ function listen () {
         }
         
         if(data.type == "seek"){
+            heard.seeking = true;
             if(!seekCooldown){ startSeekCooldown(5); }
             if(data.position>0){
               seeker(data.position)
-            }
-              
+            }  
             if(isVideoPlaying){
               videoplayer.pause();
             }
@@ -188,6 +163,7 @@ function listen () {
 
 function applyBingePack(){
   console.log('Applying',)
+  bingePack.unset=false;
   changeVideoSource(bingePack.video);
 }
 
@@ -301,16 +277,31 @@ function targetPing(data,type,target){
 }
 
 videoplayer.addEventListener('pause', (event) => {
-  ping({},'pause')
+
+  if(heard.paused){heard.paused=false;console.log("Heard:Paused");return;}
+  if(bingePack.unset){return}
+  if(justme.paused){justme.paused=false;console.log("Heard:Paused");return}
+
+  // var isVideoPlaying = (!videoplayer.paused && !videoplayer.ended)
+  // if(!isVideoPlaying){
+    ping({},'pause');
+  // }
+
 });
 
 videoplayer.addEventListener('play', (event) => {
+  
+  if(heard.playing){heard.playing=false;console.log("Heard:Playing");return;}
+  if(bingePack.unset){return;}
+  // if(justme.playing){justme.playing=false;return}
+
+  // var isVideoPlaying = (!videoplayer.paused && !videoplayer.ended)
+  // if(!isVideoPlaying){
   ping({},'play');
+  // }
   try {
     document.querySelector('.start-container').style.display='none';
-  } catch (error) {
-    
-  }
+  } catch (error) {}
 });
 
 videoplayer.addEventListener('complete', (event) => {
@@ -327,11 +318,14 @@ videoplayer.addEventListener('canplay', (event) => {
 
 
 videoplayer.addEventListener('seek', (event) => {
-  videoplayer.pause();
+  justme.paused = true;
+  videoplayer.pause()
 });
 
 
 videoplayer.addEventListener('seeked', (event) => {
+  if(heard.seeking){heard.seeking=false;return;}
+
   if(!seekCooldown){
       position = videoplayer.currentTime;
       console.log('Broadcasting seek position!',position);
@@ -354,11 +348,6 @@ function seeker(X){
   if(!isIOSDevice()) {
       videoplayer.currentTime = X;
   } else {
-    // function trackTo(evt) {
-    //     evt.target.currentTime = X;
-    //     evt.target.removeEventListener("loadeddata", trackTo)
-    // }
-    // videoplayer.addEventListener("loadeddata", trackTo);
     videoplayer.fastSeek(X)
   }
 }
@@ -486,10 +475,11 @@ try {
   adminVideoChange.addEventListener('click',()=>{
     var url = document.getElementById('VideoURL').value;
     var title = document.getElementById('VideoTitle').value;
+    bingePack.unset=false;
     pack = { ...bingePack }
     pack['video'] = url;
     pack['title'] = title;
-    pack['type'] = document.getElementById('VideoURLType').value;
+    // pack['type'] = document.getElementById('VideoURLType').value;  
     pack['desc'] = document.getElementById('VideoDesc').value;
     ping(pack,'forceBingePack')
     bingePack = pack;
@@ -499,11 +489,12 @@ try {
 
   var adminBingePackResend = document.getElementById('binge-package');
   adminBingePackResend.addEventListener('click',()=>{
-    videoplayer.setAttribute('src',bingePack.video);
+    applyBingePack()
     adminBingePackResend.setAttribute('disabled',true);
     ping({},'pause');
     videoplayer.pause()
-    ping(bingePack,'forceBingePack')
+    ping(bingePack,'forceBingePack');
+
     setTimeout(()=>{
       ping({position:position},'play');
       videoplayer.play();

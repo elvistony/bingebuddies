@@ -18,7 +18,7 @@
           <div class="mb-3">
             <label for="VideoURL" class="form-label">URL</label>
             <input type="text" class="form-control" id="VideoURL" placeholder="URL">
-            <input type="text" class="form-control" id="VideoURLType" placeholder="normal or m3u8">
+            <!-- <input type="text" class="form-control" id="VideoURLType" placeholder="normal or m3u8"> -->
             <button class="btn btn-primary btn-sm mt-2" id="dailymotionSource">Dailymotion</button>
             <button class="btn btn-primary btn-sm mt-2" id="previewSource">Preview</button>
           </div>
@@ -44,11 +44,10 @@
         <div class="col-md-6">
             <div class="row mt-4 mb-3">
                 <h3>Theatre Playback</h3>
-            <div class="w-100">
-              <video muted src="../assets/video/wait.mp4" class="" id="videoplayer" data-setup="{controls:true}" preload="auto"></video>
+            <div class="w-100" style="height: 300px;">
+              <video controls muted src="../assets/video/wait.mp4" class="video-js vjs-default-skin w-100 h-100" id="videoplayer" data-setup='{controls:true}' preload="auto"></video>
             </div>
-            <button>play</button>
-            <button>pause</button>
+            
             </div>
             <div class="row mb-3">
                 <h3>Viewers (<span id="membersCount"></span>)</h3>
@@ -78,8 +77,6 @@
     <script src="https://vjs.zencdn.net/7.2.3/video.js"></script> -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script> -->
     <script src="https://vjs.zencdn.net/8.16.1/video.min.js"></script>
-    <script>
-      
-    </script>
+    <script src="https://raw.githubusercontent.com/benjipott/video.js-dailymotion/refs/heads/master/dist-test/videojs-dailymotion.js"></script>
   </body>
 </html>

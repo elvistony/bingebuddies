@@ -7,7 +7,8 @@ document.getElementById('dailymotionSource').addEventListener('click',()=>{
         let x = await fetch(file);
         let y = await x.text();
         let js = await JSON.parse(y);
-        document.getElementById('VideoURL').value = js['qualities']['auto'][0]['url'];
+        console.log(js);
+        document.getElementById('VideoURL').value = 'https://corsproxy.io/?'+ js['qualities']['auto'][0]['url'];
       }
 })
 

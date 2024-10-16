@@ -14,7 +14,7 @@
         <div class="row justify-content-center">
             <div class="col-md-6 text-center">   
 
-                <h1>BingeBud <span>v0.6.3</span></h1>
+                <h1>BingeBud <span>v0.6.4</span></h1>
                 <button class="button btn btn-primary" id="create-room">Create New Theatre</button>
                 
                 <div class="mt-4" id="linkSection" style="display: none;">
@@ -41,41 +41,6 @@
         document.getElementById('link-admin').setAttribute('href',baseURL+"admin/#/"+roomId);
       })
     </script>
-    <script>
-      let baseURL_prefix = 'https://elvistony.dev/bingebuddies/';
-      window.__onGCastApiAvailable = function(isAvailable) {
-          if (!isAvailable) {
-              return false;
-          }
-      
-          var castContext = cast.framework.CastContext.getInstance();
-      
-          castContext.setOptions({
-              autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
-              receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID
-          });
-      
-          var stateChanged = cast.framework.CastContextEventType.CAST_STATE_CHANGED;
-          castContext.addEventListener(stateChanged, function(event) {
-              var castSession = castContext.getCurrentSession();
-              
-              // Create a media info object with a webpage URL
-              var media = new chrome.cast.media.MediaInfo(baseURL_prefix+"play/#/"+roomId), 'text/html');
-              
-              var request = new chrome.cast.media.LoadRequest(media);
-      
-              castSession && castSession
-                  .loadMedia(request)
-                  .then(function() {
-                      console.log('Success');
-                  })
-                  .catch(function(error) {
-                      console.log('Error: ' + error);
-                  });
-          });
-      };
-      
-      </script>
-      <script src='https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1'></script>
+   
 </body>
 </html>

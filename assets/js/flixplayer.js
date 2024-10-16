@@ -46,7 +46,7 @@ const video = document.getElementById('videoplayer');
             playPauseIcon.focus();
         }
 
-        function showControls(duration=3000) {
+        function showControls(duration=5000) {
             controlsOverlay.classList.remove('hide-controls');
             rewindBtn.classList.remove('hide-controls');
             forwardBtn.classList.remove('hide-controls');
@@ -62,7 +62,7 @@ const video = document.getElementById('videoplayer');
 
         // Initially start the timer to auto-hide controls
         video.addEventListener('play', () => {
-            hideControlsTimeout = setTimeout(hideControls, 3000);
+            hideControlsTimeout = setTimeout(hideControls, 5000);
             playPauseIcon.classList.remove('fa-play');
             playPauseIcon.classList.add('fa-pause');
         });
@@ -86,10 +86,10 @@ const video = document.getElementById('videoplayer');
             video.currentTime = Math.min(video.duration, video.currentTime + 10);
         });
 
-        playPauseBtn.addEventListener('focus',showControls)
-        fullscreenBtn.addEventListener('focus',showControls)
-        rewindBtn.addEventListener('focus',showControls)
-        forwardBtn.addEventListener('focus',showControls)
+        playPauseBtn.addEventListener('focus',()=>{showControls()})
+        fullscreenBtn.addEventListener('focus',()=>{showControls()})
+        rewindBtn.addEventListener('focus',()=>{showControls()})
+        forwardBtn.addEventListener('focus',()=>{showControls()})
 
         document.addEventListener('keydown', (event) => {
             if ((event.key === 'ArrowRight') || (event.key === 'ArrowLeft') || (event.key === 'ArrowUp') || (event.key === 'ArrowDown')) {
@@ -97,6 +97,15 @@ const video = document.getElementById('videoplayer');
             }
         });
 
-        
-
         document.querySelector('.start-button').focus();
+        document.querySelector('.start-button').addEventListener('click',()=>{
+            if (!document.fullscreenElement) {
+                document.body.requestFullscreen();
+                fullscreenIcon.classList.remove('fa-compress');
+                fullscreenIcon.classList.add('fa-expand');
+            } else {
+                document.exitFullscreen();
+                fullscreenIcon.classList.remove('fa-expand');
+                fullscreenIcon.classList.add('fa-compress');
+            }
+        })
