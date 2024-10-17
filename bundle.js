@@ -48,7 +48,7 @@ function changeVideoSource(url){
   player.fill(true)
   videoplayer.removeAttribute('loop');
   videoplayer.removeAttribute('autoplay');
-  player.play();
+  // player.play();
   videoplayer.load();
   bingePack.unset=false;
   
@@ -80,8 +80,8 @@ function listen () {
         Peers[peer.id].peer = peer;
 
         // Send BingePack
-        ping(bingePack,'bingepack');
-        ping({position:videoplayer.currentTime},'seek');
+        targetPing(bingePack,'welcomeBingePack',peer.id);
+        targetPing({position:videoplayer.currentTime},'seek',peer.id);
         updatePeerCount()
 
     });
@@ -148,13 +148,7 @@ function listen () {
           console.log('got a pack',data.pack);
         }
         if(data.type == "subs"){ 
-          const track = document.createElement('track');
-          // Set the track's kind, label, and src attributes
-          track.kind = 'captions';
-          track.label = 'English';
-          track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent(data.content);
-          track.default = true;
-          videoplayer.appendChild(track);
+          applySubs(data.content);
           // seeker(data.position)
         }  
     });
@@ -167,6 +161,22 @@ function applyBingePack(){
   changeVideoSource(bingePack.video);
 }
 
+document.getElementById('reloadMyPackage').addEventListener('click',()=>{
+  applyBingePack();
+});
+
+function applySubs(VTTcontent){
+  const track = document.createElement('track');
+  videoplayer.querySelectorAll('track[kind="captions"]').forEach((trk)=>{
+    videoplayer.removeChild(trk);
+  })
+  // Set the track's kind, label, and src attributes
+  track.kind = 'captions';
+  track.label = 'English';
+  track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent(VTTcontent);
+  track.default = true;
+  videoplayer.appendChild(track);
+}
 
 
 function updatePeerCount(){
@@ -309,10 +319,12 @@ videoplayer.addEventListener('complete', (event) => {
 });
 
 videoplayer.addEventListener('error', (event) => {
+  
   ping({error:event.message},'videoError')
 });
 
 videoplayer.addEventListener('canplay', (event) => {
+  if(bingePack.unset){console.log('Unset Bingepack - Ignore');return;}
   ping({},'videoSuccess')
 });
 
@@ -325,6 +337,7 @@ videoplayer.addEventListener('seek', (event) => {
 
 videoplayer.addEventListener('seeked', (event) => {
   if(heard.seeking){heard.seeking=false;return;}
+  if(bingePack.unset){console.log('Unset Bingepack - Ignore');return;}
 
   if(!seekCooldown){
       position = videoplayer.currentTime;
@@ -465,7 +478,8 @@ try {
     srtContent = document.getElementById('subs').value;
     subPack = {}
     subPack['content'] = srtToVtt(srtContent);
-    console.log('SRT to VTT',srtToVtt(srtContent))
+    // console.log('SRT to VTT',srtToVtt(srtContent))
+    applySubs(subPack['content'])
     ping(subPack,'subs');
     // track.src = 'data:text/vtt;charset=utf-8,' + encodeURIComponent();
   })
